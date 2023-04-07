@@ -1,0 +1,133 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Total shares on issue
+total_shares = 235350000
+
+# Top 20 shareholders
+top_20 = pd.DataFrame({
+    'Rank': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    'Shareholder Name': ['Mr Andrew Michael Clayton Sales', 'National Nominees Limited', 'Global Asset Solutions\C', 'Mr Kenneth Joseph Hall (<Hall Park A/C>)', 'Mewtwo Global Investments', 'Citicorp Nominees Pty Limited', 'Mr Benjamin Fegan', 'Hsbc Custody Nominees (Australia) Limited', 'Disruptive Investments Pty Ltd (<Disruptive Investments A/C>)', 'Udefine Pty Ltd', 'Silver Crown Technology Limited', 'Mr Kiril Dennis Boitcheff + Mrs Suzanne Janet Boitcheff (<Seaview Super Fund A/C>)', 'Mr Leonard Albert Piro', 'Bnp Paribas Nominees Pty Ltd (<Ib Au Noms Retailclient Drp>)', 'Wolseley Road #1 Pty Limited (<Adsaleum Family A/C>)', 'Cs Third Nominees Pty Limited (<Hsbc Cust Nom Au Ltd 13 A/C>)', 'Connected Energy Solutions Pty Ltd', 'Providential Group Pty Ltd (<Kent Sf A/C>)', 'Silver Crown Technology Limited', 'Hoperidge Enterprises Pty Ltd (<The Jones Family A/C>)'],
+    'Number of Shares Held': [39701250, 9107223, 6987420, 6117850, 3000000, 2421800, 2162250, 1025076, 1000000, 1000000, 898200, 897125, 850000, 836416, 824166, 778783, 750000, 700000, 600000, 567369],
+    'Percentage of Ownership': [26.39, 6.05, 4.64, 4.07, 1.99, 1.61, 1.44, 0.68, 0.66, 0.66, 0.6, 0.6, 0.56, 0.56, 0.55, 0.52, 0.5, 0.47, 0.4, 0.38]
+})
+
+# Range of Units
+range_of_units = pd.DataFrame({
+    'Range of Units': ['1-1,000', '1,001-5,000', '5,001-10,000', '10,001-100,000', 'Over 100,000'],
+    'Number of Shareholders': [107, 1183, 596, 1097, 155],
+    'Percentage of Total Securities': [0.05, 2.31, 3.08, 23.88, 70.68],
+    'Cumulative Percentage': [0.05, 2.36, 5.44, 29.32, 100]
+})
+
+# Your own shareholding
+my_shares = 214468
+
+# Calculate your ownership share of the company
+my_ownership = (my_shares / total_shares) * 100
+
+def calc_gini_top_20(top_20):
+    # Calculate the cumulative percentage of ownership
+    top_20['Cumulative Ownership'] = top_20['Percentage of Ownership'].cumsum()
+
+    # Calculate the Lorenz curve
+    top_20['Lorenz Curve'] = top_20['Cumulative Ownership'] / top_20['Cumulative Ownership'].max()
+
+    # Calculate the Gini coefficient
+    n = top_20.shape[0]
+    lorenz_area = top_20['Lorenz Curve'].sum() / n
+    gini = (1 - 2 * lorenz_area)
+    return gini
+
+
+def calc_gini_range_of_units(units_data):
+    # Calculate the cumulative percentage of ownership
+    units_data['Cumulative Percentage'] = units_data['Percentage of Total Securities'].cumsum()
+
+    # Calculate the Lorenz curve
+    units_data['Lorenz Curve'] = units_data['Cumulative Percentage'] / 100
+
+    # Calculate the Gini coefficient
+    lorenz_area = units_data['Lorenz Curve'].sum() / 5
+    gini = (1 - 2 * lorenz_area)
+    return gini
+
+def calculate_lorenz_curve_top20(top_20_shareholders, total_shares):
+    # sort top 20 shareholders by ownership percentage
+    sorted_top20 = sorted(top_20_shareholders, key=lambda x: x[2], reverse=True)
+    
+    # calculate cumulative ownership percentage and cumulative percentage of shareholders
+    cumulative_shareholders = []
+    cumulative_ownership = []
+    cumulative = 0
+    for shareholder in sorted_top20:
+        cumulative += shareholder[2]
+        cumulative_shareholders.append(cumulative)
+        cumulative_ownership.append(cumulative * 100)
+    
+    # calculate lorenz curve
+    lorenz_x = np.arange(0, 1.01, 0.01)
+    lorenz_y = np.zeros_like(lorenz_x)
+    lorenz_y[0] = 0
+    
+    for i in range(1, len(lorenz_x)):
+        lorenz_y[i] = lorenz_y[i-1] + ((lorenz_x[i] - lorenz_x[i-1]) * cumulative_shareholders[int(lorenz_y[i-1] * 20)])
+    
+    # normalize lorenz curve
+    lorenz_y /= lorenz_y[-1]
+    
+    return lorenz_x, lorenz_y
+
+
+def calculate_lorenz_curve_all(range_of_units, total_shares):
+    # calculate cumulative ownership percentage and cumulative percentage of shareholders
+    cumulative_shareholders = []
+    cumulative_ownership = []
+    cumulative = 0
+    for row in range_of_units:
+        cumulative += row[2]
+        cumulative_shareholders.append(cumulative)
+        cumulative_ownership.append(cumulative * 100)
+    
+    # calculate lorenz curve
+    lorenz_x = np.arange(0, 1.01, 0.01)
+    lorenz_y = np.zeros_like(lorenz_x)
+    lorenz_y[0] = 0
+    
+    for i in range(1, len(lorenz_x)):
+        lorenz_y[i] = lorenz_y[i-1] + ((lorenz_x[i] - lorenz_x[i-1]) * cumulative_shareholders[int(lorenz_y[i-1] * 100)])
+    
+    # normalize lorenz curve
+    lorenz_y /= lorenz_y[-1]
+    
+    return lorenz_x, lorenz_y
+
+def display_outputs(my_ownership, top_20_gini, all_gini, top_20_lorenz, all_lorenz):
+    print("Shareholder Information:")
+    print(f"My Ownership: {my_ownership:.2%}")
+    print(f"Total Shares on Issue: {total_shares:,.0f}")
+    print("")
+
+    print("Gini Coefficients:")
+    print(f"Top 20 Shareholders: {top_20_gini:.4f}")
+    print(f"All Shareholders: {all_gini:.4f}")
+    print("")
+
+    print("Lorenz Curves:")
+    plt.plot(top_20_lorenz[0], top_20_lorenz[1], label="Top 20 Shareholders")
+    plt.plot(all_lorenz[0], all_lorenz[1], label="All Shareholders")
+    plt.plot([0, 1], [0, 1], linestyle="--", color="gray")
+    plt.xlabel("Cumulative Shareholders")
+
+
+##HERE WE GO
+##display_outputs(top_20_gini, units_gini, top_20_lorenz, units_lorenz, ownership)
+
+    # call the functions to generate the required outputs
+top_20_gini, units_gini = compute_top_20_gini(df)
+top_20_lorenz, units_lorenz = compute_top_20_lorenz(df)
+ownership = compute_ownership(df)
+
+# display the outcomes
+display_outputs(top_20_gini, units_gini, top_20_lorenz, units_lorenz, ownership)
